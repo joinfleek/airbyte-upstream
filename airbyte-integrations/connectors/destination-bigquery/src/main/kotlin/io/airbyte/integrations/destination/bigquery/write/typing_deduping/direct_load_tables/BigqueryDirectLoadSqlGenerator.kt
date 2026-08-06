@@ -176,21 +176,55 @@ class BigqueryDirectLoadSqlGenerator(
                 "target_table._airbyte_extracted_at < new_record._airbyte_extracted_at"
         }
 
+        val hasCdcDeleteColumn =
+            stream.schema.asColumns().containsKey(CDC_DELETED_AT_COLUMN)
         val cdcDeleteClause: String
+        val cdcSoftDeleteClause: String
+        val cdcNonDeleteCondition: String
         val cdcSkipInsertClause: String
-        if (
-            stream.schema.asColumns().containsKey(CDC_DELETED_AT_COLUMN) &&
-                cdcDeletionMode == CdcDeletionMode.HARD_DELETE
-        ) {
+        if (hasCdcDeleteColumn && cdcDeletionMode == CdcDeletionMode.HARD_DELETE) {
             // Execute CDC deletions if there's already a record
             cdcDeleteClause =
                 "WHEN MATCHED AND new_record._ab_cdc_deleted_at IS NOT NULL AND $cursorComparison THEN DELETE"
+            cdcSoftDeleteClause = ""
+            cdcNonDeleteCondition = ""
             // And skip insertion entirely if there's no matching record.
             // (This is possible if a single T+D batch contains both an insertion and deletion for
             // the same PK)
             cdcSkipInsertClause = "AND new_record._ab_cdc_deleted_at IS NULL"
+        } else if (hasCdcDeleteColumn && cdcDeletionMode == CdcDeletionMode.SOFT_DELETE) {
+            cdcDeleteClause = ""
+            // PostgreSQL delete records generally contain only primary-key and CDC metadata fields.
+            // Updating every target column with that record would erase the last known business
+            // values. On a soft delete, retain those business values and update only the primary key
+            // (for completeness), CDC metadata, and Airbyte's system metadata.
+            val primaryKeyFields = importType.primaryKey.map { it.first() }.toSet()
+            val softDeleteColumnAssignments =
+                stream.schema
+                    .asColumns()
+                    .keys
+                    .filter { fieldName ->
+                        fieldName in primaryKeyFields || fieldName.startsWith("_ab_cdc_")
+                    }
+                    .joinToString("\n") { fieldName ->
+                        val column = columnNameMapping[fieldName]!!
+                        "`$column` = new_record.`$column`,"
+                    }
+            cdcSoftDeleteClause =
+                """
+                WHEN MATCHED AND new_record._ab_cdc_deleted_at IS NOT NULL AND $cursorComparison THEN UPDATE SET
+                  $softDeleteColumnAssignments
+                  _airbyte_meta = new_record._airbyte_meta,
+                  _airbyte_raw_id = new_record._airbyte_raw_id,
+                  _airbyte_extracted_at = new_record._airbyte_extracted_at,
+                  _airbyte_generation_id = new_record._airbyte_generation_id
+                """.trimIndent()
+            cdcNonDeleteCondition = "AND new_record._ab_cdc_deleted_at IS NULL"
+            cdcSkipInsertClause = ""
         } else {
             cdcDeleteClause = ""
+            cdcSoftDeleteClause = ""
+            cdcNonDeleteCondition = ""
             cdcSkipInsertClause = ""
         }
 
@@ -209,7 +243,8 @@ class BigqueryDirectLoadSqlGenerator(
                ) new_record
                ON $pkEquivalent
                $cdcDeleteClause
-               WHEN MATCHED AND $cursorComparison THEN UPDATE SET
+               $cdcSoftDeleteClause
+               WHEN MATCHED $cdcNonDeleteCondition AND $cursorComparison THEN UPDATE SET
                  $columnAssignments
                  _airbyte_meta = new_record._airbyte_meta,
                  _airbyte_raw_id = new_record._airbyte_raw_id,

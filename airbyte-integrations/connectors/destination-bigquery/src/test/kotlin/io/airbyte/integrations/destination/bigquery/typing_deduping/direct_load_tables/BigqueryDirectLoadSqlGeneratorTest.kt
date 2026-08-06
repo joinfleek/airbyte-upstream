@@ -14,13 +14,76 @@ import io.airbyte.cdk.load.data.FieldType
 import io.airbyte.cdk.load.data.IntegerType
 import io.airbyte.cdk.load.data.ObjectType
 import io.airbyte.cdk.load.data.ObjectTypeWithoutSchema
+import io.airbyte.cdk.load.data.StringType
+import io.airbyte.cdk.load.data.TimestampTypeWithTimezone
 import io.airbyte.cdk.load.orchestration.db.ColumnNameMapping
+import io.airbyte.cdk.load.orchestration.db.TableName
+import io.airbyte.integrations.destination.bigquery.spec.CdcDeletionMode
 import io.airbyte.integrations.destination.bigquery.write.typing_deduping.direct_load_tables.BigqueryDirectLoadSqlGenerator
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 class BigqueryDirectLoadSqlGeneratorTest {
+    @Test
+    fun testSoftDeletePreservesBusinessColumns() {
+        val sql =
+            BigqueryDirectLoadSqlGenerator("project", CdcDeletionMode.SOFT_DELETE)
+                .upsertTable(
+                    cdcStream(),
+                    cdcColumnMapping(),
+                    TableName("dataset", "source"),
+                    TableName("dataset", "target"),
+                )
+                .transactions
+                .single()
+                .single()
+
+        val softDeleteClause =
+            sql.substringAfter(
+                "WHEN MATCHED AND new_record._ab_cdc_deleted_at IS NOT NULL"
+            ).substringBefore("WHEN MATCHED AND new_record._ab_cdc_deleted_at IS NULL")
+
+        assertContains(softDeleteClause, "`id` = new_record.`id`,")
+        assertContains(
+            softDeleteClause,
+            "`_ab_cdc_deleted_at` = new_record.`_ab_cdc_deleted_at`,"
+        )
+        assertContains(softDeleteClause, "`_ab_cdc_lsn` = new_record.`_ab_cdc_lsn`,")
+        assertFalse(softDeleteClause.contains("`payload` = new_record.`payload`,"))
+        assertContains(
+            sql,
+            "WHEN MATCHED AND new_record._ab_cdc_deleted_at IS NULL AND",
+        )
+    }
+
+    @Test
+    fun testHardDeleteBehaviorIsUnchanged() {
+        val sql =
+            BigqueryDirectLoadSqlGenerator("project", CdcDeletionMode.HARD_DELETE)
+                .upsertTable(
+                    cdcStream(),
+                    cdcColumnMapping(),
+                    TableName("dataset", "source"),
+                    TableName("dataset", "target"),
+                )
+                .transactions
+                .single()
+                .single()
+
+        assertContains(
+            sql,
+            "WHEN MATCHED AND new_record._ab_cdc_deleted_at IS NOT NULL",
+        )
+        assertContains(sql, "THEN DELETE")
+        assertContains(
+            sql,
+            "WHEN NOT MATCHED AND new_record._ab_cdc_deleted_at IS NULL THEN INSERT",
+        )
+    }
+
     @Test
     fun testClusteringColumnsAppend() {
         val clusteringColumns =
@@ -119,4 +182,37 @@ class BigqueryDirectLoadSqlGeneratorTest {
             e.message
         )
     }
+
+    private fun cdcStream() =
+        DestinationStream(
+            "public",
+            "cdc_test",
+            Dedupe(primaryKey = listOf(listOf("id")), cursor = listOf("_ab_cdc_lsn")),
+            ObjectType(
+                linkedMapOf(
+                    "id" to FieldType(IntegerType, nullable = false),
+                    "payload" to FieldType(StringType, nullable = true),
+                    "_ab_cdc_updated_at" to
+                        FieldType(TimestampTypeWithTimezone, nullable = true),
+                    "_ab_cdc_deleted_at" to
+                        FieldType(TimestampTypeWithTimezone, nullable = true),
+                    "_ab_cdc_lsn" to FieldType(IntegerType, nullable = true),
+                )
+            ),
+            generationId = 42,
+            minimumGenerationId = 0,
+            syncId = 12,
+            namespaceMapper = NamespaceMapper(NamespaceDefinitionType.SOURCE),
+        )
+
+    private fun cdcColumnMapping() =
+        ColumnNameMapping(
+            mapOf(
+                "id" to "id",
+                "payload" to "payload",
+                "_ab_cdc_updated_at" to "_ab_cdc_updated_at",
+                "_ab_cdc_deleted_at" to "_ab_cdc_deleted_at",
+                "_ab_cdc_lsn" to "_ab_cdc_lsn",
+            )
+        )
 }
