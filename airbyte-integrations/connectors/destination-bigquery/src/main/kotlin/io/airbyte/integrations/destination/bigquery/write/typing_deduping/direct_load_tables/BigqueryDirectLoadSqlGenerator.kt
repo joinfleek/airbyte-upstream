@@ -153,7 +153,17 @@ class BigqueryDirectLoadSqlGenerator(
                 val columnName = columnNameMapping[fieldName]!!
                 "new_record.`$columnName`,"
             }
-        val selectSourceRecords = selectDedupedRecords(stream, sourceTableName, columnNameMapping)
+        val hasCdcDeleteColumn =
+            stream.schema.asColumns().containsKey(CDC_DELETED_AT_COLUMN)
+        val preserveSameBatchSoftDeleteValues =
+            hasCdcDeleteColumn && cdcDeletionMode == CdcDeletionMode.SOFT_DELETE
+        val selectSourceRecords =
+            selectDedupedRecords(
+                stream,
+                sourceTableName,
+                columnNameMapping,
+                preserveSameBatchSoftDeleteValues,
+            )
 
         val cursorComparison: String
         if (importType.cursor.isNotEmpty()) {
@@ -176,8 +186,6 @@ class BigqueryDirectLoadSqlGenerator(
                 "target_table._airbyte_extracted_at < new_record._airbyte_extracted_at"
         }
 
-        val hasCdcDeleteColumn =
-            stream.schema.asColumns().containsKey(CDC_DELETED_AT_COLUMN)
         val cdcDeleteClause: String
         val cdcSoftDeleteClause: String
         val cdcNonDeleteCondition: String
@@ -203,12 +211,13 @@ class BigqueryDirectLoadSqlGenerator(
                 stream.schema
                     .asColumns()
                     .keys
-                    .filter { fieldName ->
-                        fieldName in primaryKeyFields || fieldName.startsWith("_ab_cdc_")
-                    }
                     .joinToString("\n") { fieldName ->
                         val column = columnNameMapping[fieldName]!!
-                        "`$column` = new_record.`$column`,"
+                        if (fieldName in primaryKeyFields || fieldName.startsWith("_ab_cdc_")) {
+                            "`$column` = new_record.`$column`,"
+                        } else {
+                            "`$column` = IF(new_record._airbyte_has_preceding_non_delete, new_record.`$column`, target_table.`$column`),"
+                        }
                     }
             cdcSoftDeleteClause =
                 """
@@ -280,6 +289,7 @@ class BigqueryDirectLoadSqlGenerator(
         stream: DestinationStream,
         sourceTableName: TableName,
         columnNameMapping: ColumnNameMapping,
+        preserveSameBatchSoftDeleteValues: Boolean,
     ): String {
         val columnList: String =
             stream.schema.asColumns().keys.joinToString("\n") { fieldName ->
@@ -308,7 +318,8 @@ class BigqueryDirectLoadSqlGenerator(
                 )
             }
 
-        return """
+        if (!preserveSameBatchSoftDeleteValues) {
+            return """
                WITH records AS (
                  SELECT
                    $columnList
@@ -326,6 +337,58 @@ class BigqueryDirectLoadSqlGenerator(
                SELECT $columnList _airbyte_meta, _airbyte_raw_id, _airbyte_extracted_at, _airbyte_generation_id
                FROM numbered_rows
                WHERE row_number = 1
+               """.trimIndent()
+        }
+
+        val primaryKeyFields = importType.primaryKey.map { it.first() }.toSet()
+        val cdcDeletedAtColumn = columnNameMapping[CDC_DELETED_AT_COLUMN]!!
+        val latestRecordColumnList =
+            stream.schema.asColumns().keys.joinToString("\n") { fieldName ->
+                val columnName = columnNameMapping[fieldName]!!
+                if (fieldName in primaryKeyFields || fieldName.startsWith("_ab_cdc_")) {
+                    "latest.`$columnName` AS `$columnName`,"
+                } else {
+                    "IF(latest.`$cdcDeletedAtColumn` IS NOT NULL AND non_deleted._airbyte_raw_id IS NOT NULL, non_deleted.`$columnName`, latest.`$columnName`) AS `$columnName`,"
+                }
+            }
+        val precedingNonDeleteJoin =
+            importType.primaryKey.joinToString(" AND ") { fieldPath ->
+                val columnName = columnNameMapping[fieldPath.first()]!!
+                "(latest.`$columnName` = non_deleted.`$columnName` OR (latest.`$columnName` IS NULL AND non_deleted.`$columnName` IS NULL))"
+            }
+
+        return """
+               WITH records AS (
+                 SELECT
+                   $columnList
+                   _airbyte_meta,
+                   _airbyte_raw_id,
+                   _airbyte_extracted_at,
+                   _airbyte_generation_id
+                 FROM `$projectId`.${sourceTableName.toPrettyString(QUOTE)}
+               ), numbered_rows AS (
+                 SELECT *, row_number() OVER (
+                   PARTITION BY $pkList ORDER BY $cursorOrderClause `_airbyte_extracted_at` DESC
+                 ) AS row_number
+                 FROM records
+               ), non_deleted_numbered_rows AS (
+                 SELECT *, row_number() OVER (
+                   PARTITION BY $pkList ORDER BY $cursorOrderClause `_airbyte_extracted_at` DESC
+                 ) AS non_delete_row_number
+                 FROM records
+                 WHERE `$cdcDeletedAtColumn` IS NULL
+               )
+               SELECT
+                 $latestRecordColumnList
+                 latest._airbyte_meta,
+                 latest._airbyte_raw_id,
+                 latest._airbyte_extracted_at,
+                 latest._airbyte_generation_id,
+                 (non_deleted._airbyte_raw_id IS NOT NULL) AS _airbyte_has_preceding_non_delete
+               FROM numbered_rows latest
+               LEFT JOIN non_deleted_numbered_rows non_deleted
+                 ON $precedingNonDeleteJoin AND non_deleted.non_delete_row_number = 1
+               WHERE latest.row_number = 1
                """.trimIndent()
     }
 

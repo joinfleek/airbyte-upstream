@@ -52,10 +52,22 @@ class BigqueryDirectLoadSqlGeneratorTest {
             "`_ab_cdc_deleted_at` = new_record.`_ab_cdc_deleted_at`,"
         )
         assertContains(softDeleteClause, "`_ab_cdc_lsn` = new_record.`_ab_cdc_lsn`,")
-        assertFalse(softDeleteClause.contains("`payload` = new_record.`payload`,"))
+        assertContains(
+            softDeleteClause,
+            "`payload` = IF(new_record._airbyte_has_preceding_non_delete, new_record.`payload`, target_table.`payload`),",
+        )
         assertContains(
             sql,
             "WHEN MATCHED AND new_record._ab_cdc_deleted_at IS NULL AND",
+        )
+        assertContains(sql, "non_deleted_numbered_rows AS")
+        assertContains(
+            sql,
+            "IF(latest.`_ab_cdc_deleted_at` IS NOT NULL AND non_deleted._airbyte_raw_id IS NOT NULL, non_deleted.`payload`, latest.`payload`) AS `payload`,",
+        )
+        assertContains(
+            sql,
+            "(non_deleted._airbyte_raw_id IS NOT NULL) AS _airbyte_has_preceding_non_delete",
         )
     }
 
@@ -82,6 +94,7 @@ class BigqueryDirectLoadSqlGeneratorTest {
             sql,
             "WHEN NOT MATCHED AND new_record._ab_cdc_deleted_at IS NULL THEN INSERT",
         )
+        assertFalse(sql.contains("_airbyte_has_preceding_non_delete"))
     }
 
     @Test
