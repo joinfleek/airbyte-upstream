@@ -120,7 +120,7 @@ GRANT ROLE AIRBYTE_ROLE TO USER AIRBYTE_USER;
 
 This script grants read-only access to one schema. To replicate data from multiple databases or schemas, grant the same privileges for each database and schema. You might need separate sources for separate schemas.
 
-For key pair or programmatic access token authentication, replace the `PASSWORD` line with the authentication method's credentials.
+If you plan to use key pair or programmatic access token authentication, omit the `PASSWORD` line and follow the steps in [Authentication](#authentication) to attach a public key or token to the user.
 
 Your database user should now be ready for use with Airbyte.
 
