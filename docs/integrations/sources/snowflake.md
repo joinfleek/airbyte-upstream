@@ -39,10 +39,7 @@ The connector emits these Snowflake types as Airbyte types:
 | Snowflake type | Airbyte type |
 | --- | --- |
 | `NUMBER`, `DECIMAL`, `NUMERIC` | Number |
-| `INT`, `INTEGER` | Integer |
-| `BIGINT` | Integer |
-| `SMALLINT`, `TINYINT` | Integer |
-| `BYTEINT` | Integer |
+| `INT`, `INTEGER`, `BIGINT`, `SMALLINT`, `TINYINT`, `BYTEINT` | Integer |
 | `FLOAT`, `FLOAT4`, `FLOAT8`, `DOUBLE`, `DOUBLE PRECISION`, `REAL` | Number |
 | `VARCHAR`, `CHAR`, `CHARACTER`, `STRING`, `TEXT` | String |
 | `BOOLEAN` | Boolean |
@@ -53,7 +50,7 @@ The connector emits these Snowflake types as Airbyte types:
 | `BINARY`, `VARBINARY` | Binary |
 | `VARIANT`, `OBJECT`, `ARRAY`, `GEOGRAPHY`, `GEOMETRY`, `VECTOR`, `FILE` | String |
 
-The connector does not recommend semi-structured, binary, or other non-cursor types as cursor fields.
+Semi-structured and binary columns are emitted as strings or binary and do not make useful cursors. Choose a numeric, character, or date and time column instead.
 
 ### Snowflake-Specific Considerations
 
@@ -73,7 +70,7 @@ You'll need the following information to configure the Snowflake source:
 2. **Role**
 3. **Warehouse**
 4. **Database**
-5. **Schema**
+5. **Schema** (optional; leave empty to discover tables in all schemas the role can access)
 6. **Username** (required for username/password and key pair authentication)
 7. **Password or private key** (required for the corresponding authentication method)
 8. **Programmatic access token** (required for programmatic access token authentication)
@@ -101,35 +98,24 @@ The following options control extraction and schema discovery:
 
 This step is optional but highly recommended for better permission control and auditing. Alternatively, you can use Airbyte with an existing user in your database.
 
-To create a dedicated Snowflake user and role, run the following commands. Replace the variable values before you run the script.
+To create a dedicated Snowflake user and role, run the following commands. Replace the role, user, warehouse, database, schema, and password values with your own.
 
 ```sql
-SET AIRBYTE_ROLE = 'AIRBYTE_ROLE';
-SET AIRBYTE_USERNAME = 'AIRBYTE_USER';
-SET AIRBYTE_PASSWORD = '-password-';
-SET AIRBYTE_WAREHOUSE = 'AIRBYTE_WAREHOUSE';
-SET AIRBYTE_DATABASE = 'AIRBYTE_DATABASE';
-SET AIRBYTE_SCHEMA = 'AIRBYTE_DATABASE.PUBLIC';
+CREATE ROLE IF NOT EXISTS AIRBYTE_ROLE;
 
-BEGIN;
+CREATE USER IF NOT EXISTS AIRBYTE_USER
+PASSWORD = 'replace-with-password'
+DEFAULT_ROLE = AIRBYTE_ROLE
+DEFAULT_WAREHOUSE = AIRBYTE_WAREHOUSE;
 
-CREATE ROLE IF NOT EXISTS IDENTIFIER($AIRBYTE_ROLE);
-
-CREATE USER IF NOT EXISTS IDENTIFIER($AIRBYTE_USERNAME)
-PASSWORD = $AIRBYTE_PASSWORD
-DEFAULT_ROLE = IDENTIFIER($AIRBYTE_ROLE)
-DEFAULT_WAREHOUSE = IDENTIFIER($AIRBYTE_WAREHOUSE);
-
-GRANT USAGE ON WAREHOUSE IDENTIFIER($AIRBYTE_WAREHOUSE) TO ROLE IDENTIFIER($AIRBYTE_ROLE);
-GRANT USAGE ON DATABASE IDENTIFIER($AIRBYTE_DATABASE) TO ROLE IDENTIFIER($AIRBYTE_ROLE);
-GRANT USAGE ON SCHEMA IDENTIFIER($AIRBYTE_SCHEMA) TO ROLE IDENTIFIER($AIRBYTE_ROLE);
-GRANT SELECT ON ALL TABLES IN SCHEMA IDENTIFIER($AIRBYTE_SCHEMA) TO ROLE IDENTIFIER($AIRBYTE_ROLE);
-GRANT SELECT ON ALL VIEWS IN SCHEMA IDENTIFIER($AIRBYTE_SCHEMA) TO ROLE IDENTIFIER($AIRBYTE_ROLE);
-GRANT SELECT ON FUTURE TABLES IN SCHEMA IDENTIFIER($AIRBYTE_SCHEMA) TO ROLE IDENTIFIER($AIRBYTE_ROLE);
-GRANT SELECT ON FUTURE VIEWS IN SCHEMA IDENTIFIER($AIRBYTE_SCHEMA) TO ROLE IDENTIFIER($AIRBYTE_ROLE);
-GRANT ROLE IDENTIFIER($AIRBYTE_ROLE) TO USER IDENTIFIER($AIRBYTE_USERNAME);
-
-COMMIT;
+GRANT USAGE ON WAREHOUSE AIRBYTE_WAREHOUSE TO ROLE AIRBYTE_ROLE;
+GRANT USAGE ON DATABASE AIRBYTE_DATABASE TO ROLE AIRBYTE_ROLE;
+GRANT USAGE ON SCHEMA AIRBYTE_DATABASE.PUBLIC TO ROLE AIRBYTE_ROLE;
+GRANT SELECT ON ALL TABLES IN SCHEMA AIRBYTE_DATABASE.PUBLIC TO ROLE AIRBYTE_ROLE;
+GRANT SELECT ON ALL VIEWS IN SCHEMA AIRBYTE_DATABASE.PUBLIC TO ROLE AIRBYTE_ROLE;
+GRANT SELECT ON FUTURE TABLES IN SCHEMA AIRBYTE_DATABASE.PUBLIC TO ROLE AIRBYTE_ROLE;
+GRANT SELECT ON FUTURE VIEWS IN SCHEMA AIRBYTE_DATABASE.PUBLIC TO ROLE AIRBYTE_ROLE;
+GRANT ROLE AIRBYTE_ROLE TO USER AIRBYTE_USER;
 ```
 
 This script grants read-only access to one schema. To replicate data from multiple databases or schemas, grant the same privileges for each database and schema. You might need separate sources for separate schemas.
