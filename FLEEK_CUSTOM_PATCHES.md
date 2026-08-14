@@ -2,7 +2,7 @@
 
 Last verified: 2026-08-14
 
-This file is the canonical inventory of Fleek-maintained Airbyte connector changes. The `personal-fork` remote (`snktagarwal/airbyte-upstream`) is the source-code home; upstream Airbyte pull requests are optional and are not part of the deployment path.
+This file is the canonical inventory of Fleek-maintained Airbyte connector changes. The `internal-fork` remote (`joinfleek/airbyte-upstream`) is the source-code home; upstream Airbyte pull requests are optional and are not part of the deployment path.
 
 Never add source or destination credentials to this file. Runtime credentials remain in Airbyte/Kubernetes secrets.
 
@@ -113,7 +113,7 @@ Production connection:
 
 Source instance: `Shopify Client Credentials - Full Historical` (`40b66e17-b648-4586-a6e9-affb6c135851`).
 
-Important: the production image is immutable and deployed, but the latest cumulative Shopify source is still uncommitted in the local worktree. Commit and push that branch to `personal-fork` before attempting any source upgrade or local cleanup.
+Important: the production image is immutable and deployed, but the latest cumulative Shopify source is still uncommitted in the local worktree. Commit and push that branch to `internal-fork` before attempting any source upgrade or local cleanup.
 
 Earlier image checkpoints retained for rollback/history:
 
@@ -140,7 +140,8 @@ For every Airbyte upgrade:
 ## Repository policy
 
 - `origin` is official `airbytehq/airbyte` and is read-only for Fleek's deployment workflow.
-- `personal-fork` is `snktagarwal/airbyte-upstream` and is the durable source-code backup.
+- `internal-fork` is `joinfleek/airbyte-upstream` and is the canonical source-code backup.
+- `personal-fork` (`snktagarwal/airbyte-upstream`) is legacy and must not be treated as the canonical Fleek source.
 - Connector deployment always uses Fleek's Artifact Registry images, never a mutable branch tip.
 - A GitHub upstream PR may be opened for community contribution, but its CI, review, merge, or closure does not block Fleek deployment.
 - Never force-push a deployed patch branch. Create a new refresh branch for the next upstream version.
@@ -148,7 +149,6 @@ For every Airbyte upgrade:
 ## Open maintenance items
 
 - [ ] Commit the cumulative Shopify working-tree changes and targeted regression test.
-- [ ] Push `codex/shopify-client-credentials` to `personal-fork`.
-- [ ] Push `codex/preserve-soft-delete-values` to `personal-fork` if it is not already present.
+- [ ] Push `codex/shopify-client-credentials` to `internal-fork` after committing the deployed source snapshot.
 - [ ] Close the optional upstream Zendesk PR once no further upstream feedback is desired.
 - [ ] Re-verify this catalog whenever a connector definition or image tag changes.
