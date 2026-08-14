@@ -335,7 +335,7 @@ class ShopifyBulkManager:
             raise ShopifyBulkExceptions.BulkJobCanceled(
                 f"The BULK Job: `{self._job_id}` exited with {self._job_state}, details: {response.text}"
             )
-        else:
+        elif self._supports_checkpointing:
             self._job_get_checkpointed_result(response)
 
     def _on_canceling_job(self, **kwargs) -> None:

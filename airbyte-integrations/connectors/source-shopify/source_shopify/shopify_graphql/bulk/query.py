@@ -123,10 +123,14 @@ class ShopifyBulkQuery:
     @property
     def supports_checkpointing(self) -> bool:
         """
-        The presence of `sort_key = "UPDATED_AT"` for a query instance, usually means,
-        the server-side BULK Job results are fetched and ordered correctly, suitable for checkpointing.
+        Checkpointing partial results is safe only for independently emitted records.
+
+        Queries with record components depend on grouped parent/child JSONL
+        boundaries. A canceled partial result can omit the parent rows needed to
+        compose its children, so those queries must complete their slice intact.
         """
-        return self.sort_key == "UPDATED_AT"
+        record_components = self.record_composition.get("record_components", []) if self.record_composition else []
+        return self.sort_key == "UPDATED_AT" and not record_components
 
     @property
     def query_nodes(self) -> Optional[Union[List[Field], List[str]]]:
@@ -370,6 +374,17 @@ class MetafieldCollection(Metafield):
     """
 
     type = MetafieldType.COLLECTIONS
+
+    # Collection is the entity filtered and sorted by the BULK query, while
+    # Metafield is the entity emitted by this stream.  Keep the records grouped
+    # so the record producer can retain the collection cursor independently of
+    # each metafield's own updated_at value.  Treating every metafield as a
+    # top-level record loses that parent cursor and makes subsequent incremental
+    # syncs repeatedly scan and re-emit almost the entire child history.
+    record_composition = {
+        "new_record": "Collection",
+        "record_components": ["Metafield"],
+    }
 
 
 class MetafieldCustomer(Metafield):

@@ -323,7 +323,9 @@ class Collections(IncrementalShopifyGraphQlBulkStream):
 
 
 class MetafieldCollections(IncrementalShopifyGraphQlBulkStream):
+    parent_stream_class = Collections
     bulk_query: MetafieldCollection = MetafieldCollection
+    emit_stale_record_for_parent_state = True
 
 
 class CollectionProducts(IncrementalShopifyGraphQlBulkStream):

@@ -197,6 +197,13 @@ class IncrementalShopifyStream(ShopifyStream, ABC):
     deleted_cursor_field = "deleted_at"
     _checkpoint_cursor = None
 
+    # Parent-filtered child streams can finish a slice without emitting a new
+    # child record.  Selected streams may opt in to emitting one stale child as
+    # a state carrier so the parent's cursor can still advance.  This keeps the
+    # destination idempotent (the stale primary key is deduplicated) while
+    # avoiding repeated rescans of the same parent window.
+    emit_stale_record_for_parent_state = False
+
     @property
     def default_state_comparison_value(self) -> Union[int, str]:
         # certain streams are using `id` field as `cursor_field`, which requires to use `int` type,
@@ -276,6 +283,8 @@ class IncrementalShopifyStream(ShopifyStream, ABC):
         # Getting records >= state
         if stream_state:
             state_value = stream_state.get(self.cursor_field, self.default_state_comparison_value)
+            emitted_record = False
+            stale_state_carrier = None
             for index, record in enumerate(records_slice, 1):
                 if self.cursor_field in record:
                     record_value = record.get(self.cursor_field, self.default_state_comparison_value)
@@ -283,22 +292,34 @@ class IncrementalShopifyStream(ShopifyStream, ABC):
                     self.track_checkpoint_cursor(record_value, filter_record_value)
                     if record_value:
                         if record_value >= state_value:
+                            emitted_record = True
                             yield record
                         else:
                             if self.should_checkpoint(index):
+                                emitted_record = True
                                 yield record
+                            elif self.emit_stale_record_for_parent_state:
+                                # Keep only the final stale record. By the time
+                                # it is emitted, the grouped bulk producer has
+                                # observed the complete parent slice and its
+                                # maximum parent cursor is available to state.
+                                stale_state_carrier = record
                     else:
                         # old entities could have cursor field in place, but set to null
                         self.logger.warning(
                             f"Stream `{self.name}`, Record ID: `{record.get(self.primary_key)}` cursor value is: {record_value}, record is emitted without state comparison"
                         )
+                        emitted_record = True
                         yield record
                 else:
                     # old entities could miss the cursor field
                     self.logger.warning(
                         f"Stream `{self.name}`, Record ID: `{record.get(self.primary_key)}` missing cursor field: {self.cursor_field}, record is emitted without state comparison"
                     )
+                    emitted_record = True
                     yield record
+            if not emitted_record and stale_state_carrier is not None:
+                yield stale_state_carrier
         else:
             yield from records_slice
 
