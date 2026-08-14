@@ -12,7 +12,7 @@ Never add source or destination credentials to this file. Runtime credentials re
 | --- | --- | --- | --- | --- |
 | Zendesk inaccessible side-conversation handling | `codex/zendesk-side-conversations-403` / `ba7f202e50`, `bc978deb63`, `a0a2d65fbf` | `source-zendesk-support:5.5.0-side403fix.1` (`sha256:da38cc95a1fe60b12fe9d634919d52a736964f4e8d4aca826f4a3fa08d54f85a`) | `79c1aa37-dae3-42ae-b333-d1c105477715` | Deployed and verified |
 | BigQuery preserve soft-delete values | `codex/preserve-soft-delete-values` / `4c0841607a`, `86f41c3f6c` | `destination-bigquery:3.0.17-preserve-soft-delete.3` (`sha256:aabbbaa6bcf77e61d8b4fcabbe2851694655d5e42d38c40e0d6f4c6f47c8449b`) | `0369de09-6a13-4908-b92a-68446b776246` | Deployed and verified |
-| Shopify client credentials and grouped-stream checkpoint fixes | `codex/shopify-client-credentials` / working-tree snapshot based on `bed1670bc6` | `source-shopify:3.5.1-collectionsfix.2` (`sha256:6873b1e50452dd74d75c29b9f4e04a64ee15dbca217ec38e64f35610535dec30`) | `bf4d6c1a-6f5a-40fe-8341-02c2fa526b66` | Deployed; source changes must still be committed |
+| Shopify client credentials and grouped-stream checkpoint fixes | `codex/shopify-client-credentials` / `b88817cb7da`, `99bd8ffb44c` | `source-shopify:3.5.1-collectionsfix.2` (`sha256:6873b1e50452dd74d75c29b9f4e04a64ee15dbca217ec38e64f35610535dec30`) | `bf4d6c1a-6f5a-40fe-8341-02c2fa526b66` | Deployed, committed, and verified |
 
 Artifact registry prefix for all images above:
 
@@ -92,7 +92,7 @@ Behavior:
 - Disable partial checkpoint consumption for grouped record-component streams.
 - Group collection metafields under `Collections` and carry parent state through empty child results.
 
-Source files currently modified in `/Users/sanket/workspace/airbyte`:
+Source files:
 
 - `airbyte-integrations/connectors/source-shopify/source_shopify/auth.py`
 - `airbyte-integrations/connectors/source-shopify/source_shopify/shopify_graphql/bulk/job.py`
@@ -113,7 +113,11 @@ Production connection:
 
 Source instance: `Shopify Client Credentials - Full Historical` (`40b66e17-b648-4586-a6e9-affb6c135851`).
 
-Important: the production image is immutable and deployed, but the latest cumulative Shopify source is still uncommitted in the local worktree. Commit and push that branch to `internal-fork` before attempting any source upgrade or local cleanup.
+Verification:
+
+- Focused authentication and grouped-checkpoint tests: 26 passed.
+- Full Shopify unit suite: 291 passed.
+- The two commits above capture the cumulative source used by the deployed image and are pushed to `internal-fork`.
 
 Earlier image checkpoints retained for rollback/history:
 
@@ -128,7 +132,7 @@ Earlier image checkpoints retained for rollback/history:
 For every Airbyte upgrade:
 
 1. Create a new patch-refresh branch from the intended upstream Airbyte revision. Do not develop directly on the fork's default branch.
-2. Cherry-pick the commits listed above. For Shopify, first create a permanent commit from the currently deployed working-tree snapshot.
+2. Cherry-pick the commits listed above.
 3. Resolve conflicts by preserving the documented behavior, not by blindly retaining an old implementation.
 4. Run targeted regression tests, then the connector's full unit suite.
 5. Build an immutable, Fleek-specific image tag and record both tag and digest in this file.
@@ -148,7 +152,5 @@ For every Airbyte upgrade:
 
 ## Open maintenance items
 
-- [ ] Commit the cumulative Shopify working-tree changes and targeted regression test.
-- [ ] Push `codex/shopify-client-credentials` to `internal-fork` after committing the deployed source snapshot.
 - [ ] Close the optional upstream Zendesk PR once no further upstream feedback is desired.
 - [ ] Re-verify this catalog whenever a connector definition or image tag changes.
