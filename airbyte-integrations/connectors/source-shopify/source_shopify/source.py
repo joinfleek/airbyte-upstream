@@ -16,7 +16,7 @@ from airbyte_cdk.sources.streams import Stream
 from airbyte_cdk.sources.streams.http.exceptions import BaseBackoffException
 from airbyte_cdk.utils import AirbyteTracedException
 
-from .auth import MissingAccessTokenError, ShopifyAuthenticator
+from .auth import ClientCredentialsTokenError, MissingAccessTokenError, ShopifyAuthenticator
 from .scopes import ShopifyScopes
 from .streams.streams import (
     AbandonedCheckouts,
@@ -114,6 +114,8 @@ class ConnectionCheckTest:
             return False, self.describe_error("index_error", shop_name, response)
         except MissingAccessTokenError:
             return False, self.describe_error("missing_token_error")
+        except ClientCredentialsTokenError as error:
+            return False, str(error)
         except (BaseBackoffException, AirbyteTracedException) as error:
             return False, self.describe_error("connection_error", shop_name) or str(error)
 

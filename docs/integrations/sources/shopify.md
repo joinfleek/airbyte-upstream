@@ -16,7 +16,7 @@ This page contains the setup guide and reference information for the [Shopify](h
 
 ## Setup guide
 
-This connector supports **OAuth2.0** and **API Password** (for private applications) authentication methods.
+This connector supports **OAuth2.0**, **API Password** (for legacy private applications), and **Client Credentials** authentication methods.
 
 ### Set up Shopify
 
@@ -78,6 +78,19 @@ Authentication to the Shopify API requires a [custom application](https://help.s
 3. For **API Password**, enter your custom application's Admin API access token.
 4. (Optional) You may set a **Replication Start Date** as the starting point for your data replication. Any data created before this date will not be synced. Please note that this defaults to January 1st, 2020.
 5. Click **Set up source** and wait for the connection test to complete.
+
+#### Connect using Client Credentials
+
+Use this method for apps created through Shopify's Dev Dashboard for a store in your own Shopify organization. Airbyte exchanges the Client ID and Client Secret for a short-lived access token and refreshes it automatically.
+
+1. Create, configure, release, and install the app through the [Shopify Dev Dashboard](https://dev.shopify.com/dashboard).
+2. Enter your **Shopify Store** handle, such as `my-store` from `https://my-store.myshopify.com`.
+3. Select **Client Credentials** as the authentication method.
+4. Enter the app's **Client ID** and **Client Secret** from the Dev Dashboard.
+5. Optionally set the **Replication Start Date**.
+6. Click **Set up source** and wait for the connection test to complete.
+
+Shopify only permits the client credentials grant when the app and store belong to the same Shopify organization. For stores outside your organization, use the OAuth authorization-code flow instead.
 
 ### Custom app scopes
 
