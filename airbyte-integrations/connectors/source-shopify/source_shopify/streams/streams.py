@@ -358,6 +358,21 @@ class BalanceTransactions(IncrementalShopifyStream):
         return f"shopify_payments/balance/{self.data_field}.json"
 
 
+class Payouts(ShopifyStream):
+    """
+    Full-refresh on purpose: the REST endpoint only filters by `since_id`, but a
+    payout's `status` transitions after creation (scheduled/in_transit -> paid),
+    so id-cursor increments would freeze the status forever. The collection is
+    small enough to re-read every sync.
+    https://shopify.dev/api/admin-rest/2021-07/resources/payouts
+    """
+
+    data_field = "payouts"
+
+    def path(self, **kwargs) -> str:
+        return f"shopify_payments/{self.data_field}.json"
+
+
 class OrderAgreements(IncrementalShopifyGraphQlBulkStream):
     bulk_query: OrderAgreement = OrderAgreement
 

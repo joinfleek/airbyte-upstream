@@ -2091,7 +2091,13 @@ class Transaction(ShopifyBulkQuery):
         Field(name="parentTransaction", fields=[Field(name="id", alias="parentId")]),
         Field(name="authorizationCode", alias="authorization"),
         Field(name="totalUnsettledSet", fields=total_unsettled_set_fields),
-        Field(name="amountSet", fields=[Field(name="shopMoney", alias="shop_money", fields=amount_fields)]),
+        Field(
+            name="amountSet",
+            fields=[
+                Field(name="shopMoney", alias="shop_money", fields=amount_fields),
+                Field(name="presentmentMoney", alias="presentment_money", fields=amount_fields),
+            ],
+        ),
         Field(name="fees", fields=fees_fields),
         Field(name="paymentDetails", fields=payment_details),
     ]
@@ -2168,6 +2174,9 @@ class Transaction(ShopifyBulkQuery):
             record["amountSet"] = self.tools.fields_names_to_snake_case(amount_set)
             # nested str values to float
             record["amountSet"]["shop_money"]["amount"] = float(amount_set.get("shop_money", {}).get("amount"))
+            presentment_money = amount_set.get("presentment_money", {})
+            if presentment_money and presentment_money.get("amount") is not None:
+                record["amountSet"]["presentment_money"]["amount"] = float(presentment_money.get("amount"))
         payment_details = record.get("paymentDetails", {})
         if payment_details:
             record["paymentDetails"] = self.tools.fields_names_to_snake_case(payment_details)

@@ -70,6 +70,7 @@ SCOPES_MAPPING: Mapping[str, set[str]] = {
     # SCOPE: read_shopify_payments_payouts
     "BalanceTransactions": ("read_shopify_payments_payouts",),
     "Disputes": ("read_shopify_payments_payouts",),
+    "Payouts": ("read_shopify_payments_payouts",),
     # SCOPE: read_online_store_pages
     "Articles": ("read_online_store_pages",),
     "MetafieldArticles": ("read_online_store_pages",),

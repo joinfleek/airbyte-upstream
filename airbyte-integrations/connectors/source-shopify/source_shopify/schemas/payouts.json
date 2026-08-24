@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "id": {
+      "description": "The unique identifier of the payout",
+      "type": "integer"
+    },
+    "status": {
+      "description": "The status of the payout: scheduled, in_transit, paid, failed, canceled",
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "date": {
+      "description": "The date the payout was issued",
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date"
+    },
+    "currency": {
+      "description": "The currency of the payout amount",
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "amount": {
+      "description": "The total amount of the payout",
+      "type": [
+        "null",
+        "number"
+      ]
+    },
+    "summary": {
+      "description": "Breakdown of the payout amount",
+      "type": [
+        "null",
+        "object"
+      ],
+      "additionalProperties": true
+    },
+    "shop_url": {
+      "description": "The shop the payout belongs to",
+      "type": [
+        "null",
+        "string"
+      ]
+    }
+  }
+}
