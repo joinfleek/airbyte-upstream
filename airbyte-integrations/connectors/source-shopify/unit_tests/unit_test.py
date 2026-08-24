@@ -42,6 +42,7 @@ def test_get_next_page_token(requests_mock, auth_config):
             [
                 "abandoned_checkouts",
                 "customer_journey_summary",
+                "fulfillment_events",
                 "fulfillments",
                 "metafield_orders",
                 "metafield_shops",
@@ -59,6 +60,7 @@ def test_get_next_page_token(requests_mock, auth_config):
             [
                 "abandoned_checkouts",
                 "customer_journey_summary",
+                "fulfillment_events",
                 "fulfillments",
                 "metafield_orders",
                 "metafield_shops",

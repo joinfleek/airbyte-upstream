@@ -1,0 +1,80 @@
+{
+  "type": ["null", "object"],
+  "additionalProperties": true,
+  "properties": {
+    "id": {
+      "description": "Unique identifier of the media object",
+      "type": ["null", "integer"]
+    },
+    "admin_graphql_api_id": {
+      "description": "Unique identifier of the media object in the Admin GraphQL API",
+      "type": ["null", "string"]
+    },
+    "product_id": {
+      "description": "Unique identifier of the product the media is attached to",
+      "type": ["null", "integer"]
+    },
+    "media_type": {
+      "description": "GraphQL typename of the media object: MediaImage, Video, ExternalVideo or Model3d",
+      "type": ["null", "string"]
+    },
+    "media_content_type": {
+      "description": "Shopify media content type, e.g. IMAGE, VIDEO, EXTERNAL_VIDEO, MODEL_3D",
+      "type": ["null", "string"]
+    },
+    "status": {
+      "description": "Processing status of the media object",
+      "type": ["null", "string"]
+    },
+    "alt": {
+      "description": "Alternative text description of the media for accessibility",
+      "type": ["null", "string"]
+    },
+    "preview_image_url": {
+      "description": "URL of the media preview image",
+      "type": ["null", "string"]
+    },
+    "preview_image_width": {
+      "description": "Width of the media preview image in pixels",
+      "type": ["null", "integer"]
+    },
+    "preview_image_height": {
+      "description": "Height of the media preview image in pixels",
+      "type": ["null", "integer"]
+    },
+    "image_url": {
+      "description": "URL of the original image, populated for MediaImage only",
+      "type": ["null", "string"]
+    },
+    "image_width": {
+      "description": "Width of the original image in pixels, populated for MediaImage only",
+      "type": ["null", "integer"]
+    },
+    "image_height": {
+      "description": "Height of the original image in pixels, populated for MediaImage only",
+      "type": ["null", "integer"]
+    },
+    "mime_type": {
+      "description": "MIME type of the image file, populated for MediaImage only",
+      "type": ["null", "string"]
+    },
+    "origin_url": {
+      "description": "Source URL of the hosted video, populated for ExternalVideo only",
+      "type": ["null", "string"]
+    },
+    "created_at": {
+      "description": "Date and time when the media was created",
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "updated_at": {
+      "description": "Date and time when the media was last updated",
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "shop_url": {
+      "description": "URL of the shop the media belongs to",
+      "type": ["null", "string"]
+    }
+  }
+}

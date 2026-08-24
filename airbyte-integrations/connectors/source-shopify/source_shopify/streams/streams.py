@@ -30,12 +30,14 @@ from source_shopify.shopify_graphql.bulk.query import (
     OrderRisk,
     Product,
     ProductImage,
+    ProductMedia as ProductMediaQuery,
     ProductVariant,
     ProfileLocationGroups,
     Transaction,
 )
 from source_shopify.shopify_graphql.bulk.tools import BulkTools
 from source_shopify.utils import LimitReducingErrorHandler, ShopifyNonRetryableErrors, ShopifyRateLimiter
+from source_shopify.utils import EagerlyCachedStreamState as stream_state_cache
 
 from airbyte_cdk import HttpSubStream
 from airbyte_cdk.sources.streams.core import package_name_from_class
@@ -261,6 +263,11 @@ class ProductImages(IncrementalShopifyGraphQlBulkStream):
 class MetafieldProductImages(IncrementalShopifyGraphQlBulkStream):
     parent_stream_class = Products
     bulk_query: MetafieldProductImage = MetafieldProductImage
+
+
+class ProductMedia(IncrementalShopifyGraphQlBulkStream):
+    parent_stream_class = Products
+    bulk_query: ProductMediaQuery = ProductMediaQuery
 
 
 class ProductVariants(IncrementalShopifyGraphQlBulkStream):
@@ -741,6 +748,39 @@ class FulfillmentOrders(IncrementalShopifyGraphQlBulkStream):
 class Fulfillments(IncrementalShopifyNestedStream):
     parent_stream_class = Orders
     nested_entity = "fulfillments"
+
+
+class FulfillmentEvents(IncrementalShopifySubstream):
+    """
+    Shopify only exposes the fulfillment event history over REST, at
+    `/orders/{order_id}/fulfillments/{fulfillment_id}/events.json`: the GraphQL
+    `Fulfillment.events` connection cannot be used from a BULK operation, and the
+    non-bulk GraphQL path would cost the same request per fulfillment. Slices are
+    derived from the `fulfillments` already present in the parent Orders REST
+    payload, so discovering them costs no extra API calls.
+    """
+
+    parent_stream_class = Orders
+    data_field = "fulfillment_events"
+    slice_key = "fulfillment_id"
+
+    def stream_slices(self, stream_state: Optional[Mapping[str, Any]] = None, **kwargs) -> Iterable[Optional[Mapping[str, Any]]]:
+        parent_stream_state = stream_state.get(self.parent_stream.name) if stream_state else {}
+        for record in self.parent_stream.read_records(stream_state=parent_stream_state, **kwargs):
+            stream_state_cache.cached_state[self.parent_stream.name] = self.parent_stream.get_updated_state({}, record)
+            if self.deleted_cursor_field in record:
+                continue
+            for fulfillment in record.get("fulfillments", []):
+                yield {"order_id": record["id"], self.slice_key: fulfillment["id"]}
+
+    def path(self, stream_slice: Optional[Mapping[str, Any]] = None, **kwargs) -> str:
+        return f"orders/{stream_slice['order_id']}/fulfillments/{stream_slice[self.slice_key]}/events.json"
+
+    def read_records(self, stream_slice: Optional[Mapping[str, Any]] = None, **kwargs) -> Iterable[Mapping[str, Any]]:
+        for record in super().read_records(stream_slice=stream_slice, **kwargs):
+            # the REST event payload carries `fulfillment_id` but not the order id
+            record["order_id"] = stream_slice["order_id"]
+            yield record
 
 
 class Shop(ShopifyStream):

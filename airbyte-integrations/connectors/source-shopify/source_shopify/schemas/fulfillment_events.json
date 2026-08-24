@@ -1,0 +1,86 @@
+{
+  "type": ["null", "object"],
+  "additionalProperties": true,
+  "properties": {
+    "id": {
+      "description": "Unique identifier of the fulfillment event",
+      "type": ["null", "integer"]
+    },
+    "fulfillment_id": {
+      "description": "Unique identifier of the fulfillment the event belongs to",
+      "type": ["null", "integer"]
+    },
+    "order_id": {
+      "description": "Unique identifier of the order the fulfillment belongs to",
+      "type": ["null", "integer"]
+    },
+    "shop_id": {
+      "description": "Unique identifier of the shop",
+      "type": ["null", "integer"]
+    },
+    "status": {
+      "description": "Status of the fulfillment at the time of the event",
+      "type": ["null", "string"]
+    },
+    "message": {
+      "description": "Additional information about the event",
+      "type": ["null", "string"]
+    },
+    "happened_at": {
+      "description": "Date and time when the event occurred",
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "estimated_delivery_at": {
+      "description": "Estimated delivery date and time reported with the event",
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "city": {
+      "description": "City where the event occurred",
+      "type": ["null", "string"]
+    },
+    "province": {
+      "description": "Province or state where the event occurred",
+      "type": ["null", "string"]
+    },
+    "country": {
+      "description": "Country where the event occurred",
+      "type": ["null", "string"]
+    },
+    "zip": {
+      "description": "Zip or postal code where the event occurred",
+      "type": ["null", "string"]
+    },
+    "address1": {
+      "description": "Street address where the event occurred",
+      "type": ["null", "string"]
+    },
+    "latitude": {
+      "description": "Latitude where the event occurred",
+      "type": ["null", "number"]
+    },
+    "longitude": {
+      "description": "Longitude where the event occurred",
+      "type": ["null", "number"]
+    },
+    "created_at": {
+      "description": "Date and time when the event was created",
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "updated_at": {
+      "description": "Date and time when the event was last updated",
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "admin_graphql_api_id": {
+      "description": "Unique identifier of the event in the Admin GraphQL API",
+      "type": ["null", "string"]
+    },
+    "shop_url": {
+      "description": "URL of the shop the event belongs to",
+      "type": ["null", "string"]
+    }
+  }
+}

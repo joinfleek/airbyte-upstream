@@ -2670,6 +2670,128 @@ class ProductImage(ShopifyBulkQuery):
                 yield from self._emit_complete_records(images)
 
 
+class ProductMedia(ShopifyBulkQuery):
+    """
+    {
+        products(
+            query: "updated_at:>='2019-04-13T00:00:00+00:00' AND updated_at:<='2024-04-30T12:16:17.273363+00:00'"
+            sortKey: UPDATED_AT
+        ) {
+            edges {
+                node {
+                    __typename
+                    id
+                    media {
+                        edges {
+                            node {
+                                __typename
+                                id
+                                alt
+                                status
+                                mediaContentType
+                                preview {
+                                    image {
+                                        url
+                                        width
+                                        height
+                                    }
+                                }
+                                ... on MediaImage {
+                                    createdAt
+                                    updatedAt
+                                    mimeType
+                                    image {
+                                        url
+                                        width
+                                        height
+                                    }
+                                }
+                                ... on Video { createdAt updatedAt }
+                                ... on Model3d { createdAt updatedAt }
+                                ... on ExternalVideo { originUrl }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    """
+
+    query_name = "products"
+    sort_key = "UPDATED_AT"
+
+    image_fields: List[str] = ["url", "width", "height"]
+
+    media_node_fields: List[Union[str, Field, InlineFragment]] = [
+        "__typename",
+        "id",
+        "alt",
+        "status",
+        "mediaContentType",
+        Field(name="preview", fields=[Field(name="image", fields=image_fields)]),
+        # `ExternalVideo` is the only media type that does not implement the `File`
+        # interface, so it has no createdAt/updatedAt to select.
+        InlineFragment(
+            type="MediaImage",
+            fields=["createdAt", "updatedAt", "mimeType", Field(name="image", fields=image_fields)],
+        ),
+        InlineFragment(type="Video", fields=["createdAt", "updatedAt"]),
+        InlineFragment(type="Model3d", fields=["createdAt", "updatedAt"]),
+        InlineFragment(type="ExternalVideo", fields=["originUrl"]),
+    ]
+
+    nodes: List[Field] = [
+        "__typename",
+        "id",
+        Field(name="media", fields=[Field(name="edges", fields=[Field(name="node", fields=media_node_fields)])]),
+    ]
+
+    record_composition = {
+        "new_record": "Product",
+        "record_components": ["MediaImage", "Video", "ExternalVideo", "Model3d"],
+    }
+
+    @property
+    def query_nodes(self) -> List[Field]:
+        return self.inject_parent_cursor_field(self.nodes)
+
+    def _flatten_image(self, media: MutableMapping[str, Any], source_key: str, prefix: str) -> None:
+        image = media.pop(source_key, None) or {}
+        media[f"{prefix}_url"] = image.get("url")
+        media[f"{prefix}_width"] = image.get("width")
+        media[f"{prefix}_height"] = image.get("height")
+
+    def _process_media(self, media: MutableMapping[str, Any], product_id: Optional[int]) -> MutableMapping[str, Any]:
+        media.pop(BULK_PARENT_KEY, None)
+        media["admin_graphql_api_id"] = media.get("id")
+        media["id"] = self.tools.resolve_str_id(media.get("id"))
+        media["product_id"] = product_id
+        media["media_type"] = media.pop("__typename", None)
+        alt = media.get("alt")
+        media["alt"] = None if not alt else alt
+        preview = media.pop("preview", None) or {}
+        media["preview_image"] = preview.get("image")
+        self._flatten_image(media, "preview_image", "preview_image")
+        self._flatten_image(media, "image", "image")
+        media["createdAt"] = self.tools.from_iso8601_to_rfc3339(media, "createdAt")
+        media["updatedAt"] = self.tools.from_iso8601_to_rfc3339(media, "updatedAt")
+        return media
+
+    def record_process_components(self, record: MutableMapping[str, Any]) -> Iterable[MutableMapping[str, Any]]:
+        """
+        Defines how to process collected components.
+        """
+        record_components = record.get("record_components", {})
+        if not record_components:
+            return
+
+        product_id = record.get("id")
+        for component in self.record_composition.get("record_components"):
+            for media in record_components.get(component, []):
+                yield self._process_media(media, product_id)
+
+
 class ProductVariant(ShopifyBulkQuery):
     """
     {
