@@ -10,6 +10,7 @@ from typing import Any, Iterable, Mapping, MutableMapping, Optional
 import requests
 from source_shopify.shopify_graphql.bulk.query import (
     Collection,
+    CustomerSegment,
     CollectionProduct,
     CustomerAddresses,
     CustomerJourney,
@@ -785,6 +786,15 @@ class FulfillmentEvents(IncrementalShopifySubstream):
 
 class Shop(ShopifyStream):
     data_field = "shop"
+
+
+class Users(ShopifyStream):
+    data_field = "users"
+
+
+class CustomerSegments(IncrementalShopifyGraphQlBulkStream):
+    bulk_query: CustomerSegment = CustomerSegment
+    filter_field = None
 
 
 class MetafieldShops(IncrementalShopifyStream):

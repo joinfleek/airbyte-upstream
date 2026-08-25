@@ -20,6 +20,9 @@ SCOPES_MAPPING: Mapping[str, set[str]] = {
     "Customers": ("read_customers",),
     "MetafieldCustomers": ("read_customers",),
     "CustomerAddress": ("read_customers",),
+    "CustomerSegments": ("read_customers",),
+    # SCOPE: read_users
+    "Users": ("read_users",),
     # SCOPE: read_orders
     "OrderAgreements": ("read_orders",),
     "Orders": ("read_orders",),

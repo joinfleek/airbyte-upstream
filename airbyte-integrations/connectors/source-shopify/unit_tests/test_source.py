@@ -422,7 +422,8 @@ def test_user_scopes_generate_full_list_of_streams(config, mocker):
     mocker.patch.object(ShopifyScopes, "get_user_scopes", return_value=expected_user_scopes)
 
     # Adjust this number based on the actual permitted streams
-    expected_streams_number = 51
+    # (Users requires read_users, absent from the mocked scope list above)
+    expected_streams_number = 52
     assert len(source.streams(config)) == expected_streams_number
 
 

@@ -3246,6 +3246,49 @@ class OrderRisk(ShopifyBulkQuery):
             yield record
 
 
+class CustomerSegment(ShopifyBulkQuery):
+    """
+    {
+        segments {
+            edges {
+                node {
+                    __typename
+                    id
+                    name
+                    query
+                    creationDate
+                    lastEditDate
+                }
+            }
+        }
+    }
+    """
+
+    query_name = "segments"
+    filter_field = None
+    sort_key = None
+
+    record_composition = {"new_record": "Segment"}
+
+    query_nodes: List[Field] = [
+        "__typename",
+        "id",
+        "name",
+        "query",
+        "creationDate",
+        "lastEditDate",
+    ]
+
+    def record_process_components(self, record: MutableMapping[str, Any]) -> Optional[Iterable[MutableMapping[str, Any]]]:
+        record["admin_graphql_api_id"] = record.get("id")
+        record["id"] = self.tools.resolve_str_id(record.get("id"))
+        record["created_at"] = self.tools.from_iso8601_to_rfc3339(record, "creationDate")
+        record["updated_at"] = self.tools.from_iso8601_to_rfc3339(record, "lastEditDate")
+        record.pop("creationDate", None)
+        record.pop("lastEditDate", None)
+        yield record
+
+
 class OrderAgreement(ShopifyBulkQuery):
     """
     Output example to BULK query `order agreement` from `orders` with `filter query` by `updated_at` sorted `ASC`:

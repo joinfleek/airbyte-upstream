@@ -30,6 +30,7 @@ from .streams.streams import (
     CustomCollections,
     CustomerAddress,
     CustomerJourneySummary,
+    CustomerSegments,
     Customers,
     DeletedProducts,
     DiscountCodes,
@@ -70,6 +71,7 @@ from .streams.streams import (
     Shop,
     SmartCollections,
     TenderTransactions,
+    Users,
     Transactions,
     TransactionsGraphql,
 )
@@ -229,6 +231,8 @@ class SourceShopify(AbstractSource):
         permitted_streams = scopes_manager.get_permitted_streams()
         stream_instances = [
             AbandonedCheckouts(config),
+            CustomerSegments(config),
+            Users(config),
             Articles(config),
             BalanceTransactions(config),
             Blogs(config),
