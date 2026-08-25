@@ -3215,10 +3215,10 @@ class OrderRisk(ShopifyBulkQuery):
         return assessments
 
     def _has_risk_recommendation(self, recommendation: Optional[str]) -> bool:
-        # if there are no risk recommendation, the value is literally "NONE",
-        # we should skip such record, because there is no risk info for it.
-        no_risk_pattern = "NONE"
-        return recommendation != no_risk_pattern if recommendation else False
+        # "NONE" is a real recommendation value carrying assessments and facts
+        # (Shopify emits e.g. risk_level NONE with populated fact lists), so it
+        # must be kept to mirror the per-order risk contract downstream.
+        return bool(recommendation)
 
     def record_process_components(self, record: MutableMapping[str, Any]) -> Optional[Iterable[MutableMapping[str, Any]]]:
         """
