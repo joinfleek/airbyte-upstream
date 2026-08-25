@@ -3280,8 +3280,7 @@ class CustomerSegment(ShopifyBulkQuery):
     ]
 
     def record_process_components(self, record: MutableMapping[str, Any]) -> Optional[Iterable[MutableMapping[str, Any]]]:
-        record["admin_graphql_api_id"] = record.get("id")
-        record["id"] = self.tools.resolve_str_id(record.get("id"))
+        # `id`/`admin_graphql_api_id` are already resolved by `record_resolve_id`
         record["created_at"] = self.tools.from_iso8601_to_rfc3339(record, "creationDate")
         record["updated_at"] = self.tools.from_iso8601_to_rfc3339(record, "lastEditDate")
         record.pop("creationDate", None)
