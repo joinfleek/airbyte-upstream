@@ -700,7 +700,6 @@ schemas:
         type: string
       created_at:
         type: string
-        format: date-time
       plural_noun:
         type: string
       singular_noun:
@@ -721,7 +720,6 @@ schemas:
         type: string
       created_at:
         type: string
-        format: date-time
       created_by_actor:
         type: object
         additionalProperties: true
@@ -758,7 +756,6 @@ schemas:
           - string
       created_at:
         type: string
-        format: date-time
       email_address:
         type: string
       first_name:
@@ -788,7 +785,6 @@ schemas:
         additionalProperties: true
       created_at:
         type: string
-        format: date-time
       default_value:
         type:
           - "null"
@@ -842,7 +838,6 @@ schemas:
         type: string
       created_at:
         type: string
-        format: date-time
       web_url:
         type: string
   list_attribute:
@@ -868,7 +863,6 @@ schemas:
         additionalProperties: true
       created_at:
         type: string
-        format: date-time
       default_value:
         type:
           - "null"
@@ -922,7 +916,6 @@ schemas:
         type: string
       created_at:
         type: string
-        format: date-time
       parent_object:
         type: string
       parent_record_id:
@@ -945,7 +938,6 @@ schemas:
         type: string
       created_at:
         type: string
-        format: date-time
       created_by_actor:
         type: object
         additionalProperties: true

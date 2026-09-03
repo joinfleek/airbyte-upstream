@@ -166,6 +166,22 @@ def test_typed_destination_schema_declares_the_api_contract() -> None:
     for schema_name, properties in expected_properties.items():
         assert properties <= set(MANIFEST["schemas"][schema_name]["properties"])
 
+    for schema_name in (
+        "object",
+        "list",
+        "workspace_member",
+        "object_attribute",
+        "record",
+        "list_attribute",
+        "entry",
+        "note",
+    ):
+        # Attio emits nanosecond timestamps, while BigQuery TIMESTAMP accepts
+        # microseconds. Preserve the source value and normalize it in dbt.
+        assert MANIFEST["schemas"][schema_name]["properties"]["created_at"] == {
+            "type": "string"
+        }
+
 
 def test_archived_configuration_and_child_values_are_included() -> None:
     streams = MANIFEST["definitions"]["streams"]
