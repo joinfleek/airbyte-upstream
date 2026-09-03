@@ -1,9 +1,12 @@
 {
   "streams": [
     "entries",
+    "list_attribute_options",
     "list_attributes",
     "lists",
     "notes",
+    "object_attribute_options",
+    "object_attribute_statuses",
     "object_attributes",
     "objects",
     "records",

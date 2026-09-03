@@ -82,6 +82,26 @@ definitions:
       field_path:
         - data
 
+  select_attribute_selector:
+    type: RecordSelector
+    extractor:
+      type: DpathExtractor
+      field_path:
+        - data
+    record_filter:
+      type: RecordFilter
+      condition: "{{ record.get('type') == 'select' }}"
+
+  status_attribute_selector:
+    type: RecordSelector
+    extractor:
+      type: DpathExtractor
+      field_path:
+        - data
+    record_filter:
+      type: RecordFilter
+      condition: "{{ record.get('type') == 'status' }}"
+
   streams:
     objects:
       type: DeclarativeStream
@@ -172,14 +192,17 @@ definitions:
       name: object_attributes
       primary_key:
         - workspace_id
-        - object_id
+        - target_id
         - attribute_id
       retriever:
         type: SimpleRetriever
         requester:
           $ref: "#/definitions/base_requester"
-          path: "objects/{{ stream_slice.object_slug }}/attributes"
+          path: "objects/{{ stream_partition.object_slug }}/attributes"
           http_method: GET
+          request_parameters:
+            show_archived: "true"
+            limit: "500"
         record_selector:
           $ref: "#/definitions/data_selector"
         partition_router:
@@ -195,12 +218,12 @@ definitions:
           fields:
             - type: AddedFieldDefinition
               path: [_airbyte_attio_object_slug]
-              value: "{{ stream_slice.object_slug }}"
+              value: "{{ stream_partition.object_slug }}"
             - type: AddedFieldDefinition
               path: [workspace_id]
               value: "{{ record['id']['workspace_id'] }}"
             - type: AddedFieldDefinition
-              path: [object_id]
+              path: [target_id]
               value: "{{ record['id']['object_id'] }}"
             - type: AddedFieldDefinition
               path: [attribute_id]
@@ -221,7 +244,7 @@ definitions:
         type: SimpleRetriever
         requester:
           $ref: "#/definitions/base_requester"
-          path: "objects/{{ stream_slice.object_slug }}/records/query"
+          path: "objects/{{ stream_partition.object_slug }}/records/query"
           http_method: POST
           request_headers:
             Content-Type: application/json
@@ -242,7 +265,7 @@ definitions:
           fields:
             - type: AddedFieldDefinition
               path: [_airbyte_attio_object_slug]
-              value: "{{ stream_slice.object_slug }}"
+              value: "{{ stream_partition.object_slug }}"
             - type: AddedFieldDefinition
               path: [workspace_id]
               value: "{{ record['id']['workspace_id'] }}"
@@ -262,14 +285,17 @@ definitions:
       name: list_attributes
       primary_key:
         - workspace_id
-        - list_id
+        - target_id
         - attribute_id
       retriever:
         type: SimpleRetriever
         requester:
           $ref: "#/definitions/base_requester"
-          path: "lists/{{ stream_slice.list_slug }}/attributes"
+          path: "lists/{{ stream_partition.list_slug }}/attributes"
           http_method: GET
+          request_parameters:
+            show_archived: "true"
+            limit: "500"
         record_selector:
           $ref: "#/definitions/data_selector"
         partition_router:
@@ -285,13 +311,13 @@ definitions:
           fields:
             - type: AddedFieldDefinition
               path: [_airbyte_attio_list_slug]
-              value: "{{ stream_slice.list_slug }}"
+              value: "{{ stream_partition.list_slug }}"
             - type: AddedFieldDefinition
               path: [workspace_id]
               value: "{{ record['id']['workspace_id'] }}"
             - type: AddedFieldDefinition
-              path: [list_id]
-              value: "{{ record['id']['list_id'] }}"
+              path: [target_id]
+              value: "{{ record['id']['object_id'] }}"
             - type: AddedFieldDefinition
               path: [attribute_id]
               value: "{{ record['id']['attribute_id'] }}"
@@ -299,6 +325,273 @@ definitions:
         type: InlineSchemaLoader
         schema:
           $ref: "#/schemas/list_attribute"
+
+    object_select_attributes:
+      type: DeclarativeStream
+      name: object_select_attributes
+      primary_key:
+        - workspace_id
+        - target_id
+        - attribute_id
+      retriever:
+        type: SimpleRetriever
+        requester:
+          $ref: "#/definitions/base_requester"
+          path: "objects/{{ stream_partition.object_slug }}/attributes"
+          http_method: GET
+          request_parameters:
+            show_archived: "true"
+            limit: "500"
+        record_selector:
+          $ref: "#/definitions/select_attribute_selector"
+        partition_router:
+          type: SubstreamPartitionRouter
+          parent_stream_configs:
+            - type: ParentStreamConfig
+              parent_key: api_slug
+              partition_field: object_slug
+              stream:
+                $ref: "#/definitions/streams/objects"
+      transformations:
+        - type: AddFields
+          fields:
+            - type: AddedFieldDefinition
+              path: [workspace_id]
+              value: "{{ record['id']['workspace_id'] }}"
+            - type: AddedFieldDefinition
+              path: [target_id]
+              value: "{{ record['id']['object_id'] }}"
+            - type: AddedFieldDefinition
+              path: [attribute_id]
+              value: "{{ record['id']['attribute_id'] }}"
+      schema_loader:
+        type: InlineSchemaLoader
+        schema:
+          $ref: "#/schemas/object_attribute"
+
+    list_select_attributes:
+      type: DeclarativeStream
+      name: list_select_attributes
+      primary_key:
+        - workspace_id
+        - target_id
+        - attribute_id
+      retriever:
+        type: SimpleRetriever
+        requester:
+          $ref: "#/definitions/base_requester"
+          path: "lists/{{ stream_partition.list_slug }}/attributes"
+          http_method: GET
+          request_parameters:
+            show_archived: "true"
+            limit: "500"
+        record_selector:
+          $ref: "#/definitions/select_attribute_selector"
+        partition_router:
+          type: SubstreamPartitionRouter
+          parent_stream_configs:
+            - type: ParentStreamConfig
+              parent_key: api_slug
+              partition_field: list_slug
+              stream:
+                $ref: "#/definitions/streams/lists"
+      transformations:
+        - type: AddFields
+          fields:
+            - type: AddedFieldDefinition
+              path: [workspace_id]
+              value: "{{ record['id']['workspace_id'] }}"
+            - type: AddedFieldDefinition
+              path: [target_id]
+              value: "{{ record['id']['object_id'] }}"
+            - type: AddedFieldDefinition
+              path: [attribute_id]
+              value: "{{ record['id']['attribute_id'] }}"
+      schema_loader:
+        type: InlineSchemaLoader
+        schema:
+          $ref: "#/schemas/list_attribute"
+
+    object_status_attributes:
+      type: DeclarativeStream
+      name: object_status_attributes
+      primary_key:
+        - workspace_id
+        - target_id
+        - attribute_id
+      retriever:
+        type: SimpleRetriever
+        requester:
+          $ref: "#/definitions/base_requester"
+          path: "objects/{{ stream_partition.object_slug }}/attributes"
+          http_method: GET
+          request_parameters:
+            show_archived: "true"
+            limit: "500"
+        record_selector:
+          $ref: "#/definitions/status_attribute_selector"
+        partition_router:
+          type: SubstreamPartitionRouter
+          parent_stream_configs:
+            - type: ParentStreamConfig
+              parent_key: api_slug
+              partition_field: object_slug
+              stream:
+                $ref: "#/definitions/streams/objects"
+      transformations:
+        - type: AddFields
+          fields:
+            - type: AddedFieldDefinition
+              path: [workspace_id]
+              value: "{{ record['id']['workspace_id'] }}"
+            - type: AddedFieldDefinition
+              path: [target_id]
+              value: "{{ record['id']['object_id'] }}"
+            - type: AddedFieldDefinition
+              path: [attribute_id]
+              value: "{{ record['id']['attribute_id'] }}"
+      schema_loader:
+        type: InlineSchemaLoader
+        schema:
+          $ref: "#/schemas/object_attribute"
+
+    object_attribute_options:
+      type: DeclarativeStream
+      name: object_attribute_options
+      primary_key:
+        - workspace_id
+        - target_id
+        - attribute_id
+        - option_id
+      retriever:
+        type: SimpleRetriever
+        requester:
+          $ref: "#/definitions/base_requester"
+          path: "objects/{{ stream_partition.attribute.object_id }}/attributes/{{ stream_partition.attribute.attribute_id }}/options"
+          http_method: GET
+          request_parameters:
+            show_archived: "true"
+        record_selector:
+          $ref: "#/definitions/data_selector"
+        partition_router:
+          type: SubstreamPartitionRouter
+          parent_stream_configs:
+            - type: ParentStreamConfig
+              parent_key: id
+              partition_field: attribute
+              stream:
+                $ref: "#/definitions/streams/object_select_attributes"
+      transformations:
+        - type: AddFields
+          fields:
+            - type: AddedFieldDefinition
+              path: [workspace_id]
+              value: "{{ record['id']['workspace_id'] }}"
+            - type: AddedFieldDefinition
+              path: [target_id]
+              value: "{{ record['id']['object_id'] }}"
+            - type: AddedFieldDefinition
+              path: [attribute_id]
+              value: "{{ record['id']['attribute_id'] }}"
+            - type: AddedFieldDefinition
+              path: [option_id]
+              value: "{{ record['id']['option_id'] }}"
+      schema_loader:
+        type: InlineSchemaLoader
+        schema:
+          $ref: "#/schemas/attribute_option"
+
+    list_attribute_options:
+      type: DeclarativeStream
+      name: list_attribute_options
+      primary_key:
+        - workspace_id
+        - target_id
+        - attribute_id
+        - option_id
+      retriever:
+        type: SimpleRetriever
+        requester:
+          $ref: "#/definitions/base_requester"
+          path: "lists/{{ stream_partition.attribute.object_id }}/attributes/{{ stream_partition.attribute.attribute_id }}/options"
+          http_method: GET
+          request_parameters:
+            show_archived: "true"
+        record_selector:
+          $ref: "#/definitions/data_selector"
+        partition_router:
+          type: SubstreamPartitionRouter
+          parent_stream_configs:
+            - type: ParentStreamConfig
+              parent_key: id
+              partition_field: attribute
+              stream:
+                $ref: "#/definitions/streams/list_select_attributes"
+      transformations:
+        - type: AddFields
+          fields:
+            - type: AddedFieldDefinition
+              path: [workspace_id]
+              value: "{{ record['id']['workspace_id'] }}"
+            - type: AddedFieldDefinition
+              path: [target_id]
+              value: "{{ record['id']['object_id'] }}"
+            - type: AddedFieldDefinition
+              path: [attribute_id]
+              value: "{{ record['id']['attribute_id'] }}"
+            - type: AddedFieldDefinition
+              path: [option_id]
+              value: "{{ record['id']['option_id'] }}"
+      schema_loader:
+        type: InlineSchemaLoader
+        schema:
+          $ref: "#/schemas/attribute_option"
+
+    object_attribute_statuses:
+      type: DeclarativeStream
+      name: object_attribute_statuses
+      primary_key:
+        - workspace_id
+        - target_id
+        - attribute_id
+        - status_id
+      retriever:
+        type: SimpleRetriever
+        requester:
+          $ref: "#/definitions/base_requester"
+          path: "objects/{{ stream_partition.attribute.object_id }}/attributes/{{ stream_partition.attribute.attribute_id }}/statuses"
+          http_method: GET
+          request_parameters:
+            show_archived: "true"
+        record_selector:
+          $ref: "#/definitions/data_selector"
+        partition_router:
+          type: SubstreamPartitionRouter
+          parent_stream_configs:
+            - type: ParentStreamConfig
+              parent_key: id
+              partition_field: attribute
+              stream:
+                $ref: "#/definitions/streams/object_status_attributes"
+      transformations:
+        - type: AddFields
+          fields:
+            - type: AddedFieldDefinition
+              path: [workspace_id]
+              value: "{{ record['id']['workspace_id'] }}"
+            - type: AddedFieldDefinition
+              path: [target_id]
+              value: "{{ record['id']['object_id'] }}"
+            - type: AddedFieldDefinition
+              path: [attribute_id]
+              value: "{{ record['id']['attribute_id'] }}"
+            - type: AddedFieldDefinition
+              path: [status_id]
+              value: "{{ record['id']['status_id'] }}"
+      schema_loader:
+        type: InlineSchemaLoader
+        schema:
+          $ref: "#/schemas/attribute_status"
 
     entries:
       type: DeclarativeStream
@@ -311,7 +604,7 @@ definitions:
         type: SimpleRetriever
         requester:
           $ref: "#/definitions/base_requester"
-          path: "lists/{{ stream_slice.list_slug }}/entries/query"
+          path: "lists/{{ stream_partition.list_slug }}/entries/query"
           http_method: POST
           request_headers:
             Content-Type: application/json
@@ -332,7 +625,7 @@ definitions:
           fields:
             - type: AddedFieldDefinition
               path: [_airbyte_attio_list_slug]
-              value: "{{ stream_slice.list_slug }}"
+              value: "{{ stream_partition.list_slug }}"
             - type: AddedFieldDefinition
               path: [workspace_id]
               value: "{{ record['id']['workspace_id'] }}"
@@ -380,9 +673,12 @@ definitions:
 streams:
   - $ref: "#/definitions/streams/objects"
   - $ref: "#/definitions/streams/object_attributes"
+  - $ref: "#/definitions/streams/object_attribute_options"
+  - $ref: "#/definitions/streams/object_attribute_statuses"
   - $ref: "#/definitions/streams/records"
   - $ref: "#/definitions/streams/lists"
   - $ref: "#/definitions/streams/list_attributes"
+  - $ref: "#/definitions/streams/list_attribute_options"
   - $ref: "#/definitions/streams/entries"
   - $ref: "#/definitions/streams/notes"
   - $ref: "#/definitions/streams/workspace_members"
@@ -402,6 +698,13 @@ schemas:
         type: string
       api_slug:
         type: string
+      created_at:
+        type: string
+        format: date-time
+      plural_noun:
+        type: string
+      singular_noun:
+        type: string
   list:
     type: object
     additionalProperties: true
@@ -416,6 +719,25 @@ schemas:
         type: string
       api_slug:
         type: string
+      created_at:
+        type: string
+        format: date-time
+      created_by_actor:
+        type: object
+        additionalProperties: true
+      name:
+        type: string
+      parent_object:
+        type: array
+        items:
+          type: string
+      workspace_access:
+        type: string
+      workspace_member_access:
+        type: array
+        items:
+          type: object
+          additionalProperties: true
   workspace_member:
     type: object
     additionalProperties: true
@@ -428,6 +750,21 @@ schemas:
         type: string
       workspace_member_id:
         type: string
+      access_level:
+        type: string
+      avatar_url:
+        type:
+          - "null"
+          - string
+      created_at:
+        type: string
+        format: date-time
+      email_address:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
   object_attribute:
     type: object
     additionalProperties: true
@@ -438,11 +775,51 @@ schemas:
         additionalProperties: true
       workspace_id:
         type: string
-      object_id:
+      target_id:
         type: string
       attribute_id:
         type: string
       _airbyte_attio_object_slug:
+        type: string
+      api_slug:
+        type: string
+      config:
+        type: object
+        additionalProperties: true
+      created_at:
+        type: string
+        format: date-time
+      default_value:
+        type:
+          - "null"
+          - object
+        additionalProperties: true
+      description:
+        type:
+          - "null"
+          - string
+      is_archived:
+        type: boolean
+      is_default_value_enabled:
+        type: boolean
+      is_multiselect:
+        type: boolean
+      is_required:
+        type: boolean
+      is_system_attribute:
+        type: boolean
+      is_unique:
+        type: boolean
+      is_writable:
+        type: boolean
+      relationship:
+        type:
+          - "null"
+          - object
+        additionalProperties: true
+      title:
+        type: string
+      type:
         type: string
   record:
     type: object
@@ -463,6 +840,11 @@ schemas:
         additionalProperties: true
       _airbyte_attio_object_slug:
         type: string
+      created_at:
+        type: string
+        format: date-time
+      web_url:
+        type: string
   list_attribute:
     type: object
     additionalProperties: true
@@ -473,11 +855,51 @@ schemas:
         additionalProperties: true
       workspace_id:
         type: string
-      list_id:
+      target_id:
         type: string
       attribute_id:
         type: string
       _airbyte_attio_list_slug:
+        type: string
+      api_slug:
+        type: string
+      config:
+        type: object
+        additionalProperties: true
+      created_at:
+        type: string
+        format: date-time
+      default_value:
+        type:
+          - "null"
+          - object
+        additionalProperties: true
+      description:
+        type:
+          - "null"
+          - string
+      is_archived:
+        type: boolean
+      is_default_value_enabled:
+        type: boolean
+      is_multiselect:
+        type: boolean
+      is_required:
+        type: boolean
+      is_system_attribute:
+        type: boolean
+      is_unique:
+        type: boolean
+      is_writable:
+        type: boolean
+      relationship:
+        type:
+          - "null"
+          - object
+        additionalProperties: true
+      title:
+        type: string
+      type:
         type: string
   entry:
     type: object
@@ -498,6 +920,13 @@ schemas:
         additionalProperties: true
       _airbyte_attio_list_slug:
         type: string
+      created_at:
+        type: string
+        format: date-time
+      parent_object:
+        type: string
+      parent_record_id:
+        type: string
   note:
     type: object
     additionalProperties: true
@@ -509,6 +938,76 @@ schemas:
       workspace_id:
         type: string
       note_id:
+        type: string
+      content_markdown:
+        type: string
+      content_plaintext:
+        type: string
+      created_at:
+        type: string
+        format: date-time
+      created_by_actor:
+        type: object
+        additionalProperties: true
+      meeting_id:
+        type:
+          - "null"
+          - string
+      parent_object:
+        type: string
+      parent_record_id:
+        type: string
+      tags:
+        type: array
+        items:
+          type: string
+      title:
+        type: string
+  attribute_option:
+    type: object
+    additionalProperties: true
+    required: [id]
+    properties:
+      id:
+        type: object
+        additionalProperties: true
+      workspace_id:
+        type: string
+      target_id:
+        type: string
+      attribute_id:
+        type: string
+      option_id:
+        type: string
+      is_archived:
+        type: boolean
+      title:
+        type: string
+  attribute_status:
+    type: object
+    additionalProperties: true
+    required: [id]
+    properties:
+      id:
+        type: object
+        additionalProperties: true
+      workspace_id:
+        type: string
+      target_id:
+        type: string
+      attribute_id:
+        type: string
+      status_id:
+        type: string
+      celebration_enabled:
+        type: boolean
+      is_archived:
+        type: boolean
+      target_time_in_status:
+        type:
+          - "null"
+          - string
+      title:
         type: string
 
 spec:

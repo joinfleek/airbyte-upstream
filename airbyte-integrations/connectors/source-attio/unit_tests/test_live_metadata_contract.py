@@ -34,7 +34,15 @@ def _source() -> tuple[YamlDeclarativeSource, dict[str, str]]:
 
 
 def _rows(stream) -> list[dict]:
-    return list(stream.read_records(sync_mode=SyncMode.full_refresh))
+    rows = []
+    for stream_slice in stream.stream_slices(sync_mode=SyncMode.full_refresh):
+        rows.extend(
+            stream.read_records(
+                sync_mode=SyncMode.full_refresh,
+                stream_slice=stream_slice,
+            )
+        )
+    return rows
 
 
 def test_live_discovery_and_workspace_topology() -> None:
@@ -87,3 +95,48 @@ def test_live_companies_partition_has_unique_records() -> None:
     assert len(rows) == len(keys)
     assert all(None not in key for key in keys)
     assert all(row["_airbyte_attio_object_slug"] == "companies" for row in rows)
+
+
+@pytest.mark.parametrize(
+    ("stream_name", "id_field"),
+    [
+        ("object_attribute_options", "option_id"),
+        ("list_attribute_options", "option_id"),
+        ("object_attribute_statuses", "status_id"),
+    ],
+)
+def test_live_attribute_children_have_complete_unique_keys(
+    stream_name: str,
+    id_field: str,
+) -> None:
+    source, config = _source()
+    stream = next(item for item in source.streams(config) if item.name == stream_name)
+    rows = _rows(stream)
+    keys = {
+        (
+            row["workspace_id"],
+            row["target_id"],
+            row["attribute_id"],
+            row[id_field],
+        )
+        for row in rows
+    }
+
+    assert rows
+    assert len(rows) == len(keys)
+    assert all(all(part not in (None, "") for part in key) for key in keys)
+
+
+def test_live_attribute_targets_are_complete() -> None:
+    source, config = _source()
+    streams = {stream.name: stream for stream in source.streams(config)}
+
+    for stream_name in ("object_attributes", "list_attributes"):
+        rows = _rows(streams[stream_name])
+        keys = {
+            (row["workspace_id"], row["target_id"], row["attribute_id"])
+            for row in rows
+        }
+        assert rows
+        assert len(rows) == len(keys)
+        assert all(all(part not in (None, "") for part in key) for key in keys)
