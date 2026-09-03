@@ -27,6 +27,7 @@ def test_token_is_secret_and_host_is_restricted() -> None:
     token = MANIFEST["spec"]["connection_specification"]["properties"]["api_token"]
     assert token["airbyte_secret"] is True
     assert METADATA["data"]["allowedHosts"]["hosts"] == ["api.attio.com"]
+    assert MANIFEST["definitions"]["base_requester"]["use_cache"] is False
 
 
 def test_post_streams_use_bounded_body_pagination() -> None:

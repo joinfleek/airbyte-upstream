@@ -39,6 +39,7 @@ definitions:
   base_requester:
     type: HttpRequester
     url_base: https://api.attio.com/v2/
+    use_cache: false
     authenticator:
       $ref: "#/definitions/authenticator"
     error_handler:
