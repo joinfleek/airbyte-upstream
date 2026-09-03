@@ -64,6 +64,26 @@ def test_child_paths_use_parent_stream_slices() -> None:
     )
 
 
+def test_primary_keys_are_flattened_for_concurrent_discovery() -> None:
+    streams = MANIFEST["definitions"]["streams"]
+    expected = {
+        "objects": ["workspace_id", "object_id"],
+        "object_attributes": ["workspace_id", "object_id", "attribute_id"],
+        "records": ["workspace_id", "object_id", "record_id"],
+        "lists": ["workspace_id", "list_id"],
+        "list_attributes": ["workspace_id", "list_id", "attribute_id"],
+        "entries": ["workspace_id", "list_id", "entry_id"],
+        "notes": ["workspace_id", "note_id"],
+        "workspace_members": ["workspace_id", "workspace_member_id"],
+    }
+
+    for stream_name, primary_key in expected.items():
+        stream = streams[stream_name]
+        assert stream["primary_key"] == primary_key
+        schema = MANIFEST["schemas"][stream["schema_loader"]["schema"]["$ref"].rsplit("/", 1)[-1]]
+        assert set(primary_key) <= set(schema["properties"])
+
+
 def test_retries_rate_limits_and_server_errors() -> None:
     handler = MANIFEST["definitions"]["error_handler"]
     filters = {

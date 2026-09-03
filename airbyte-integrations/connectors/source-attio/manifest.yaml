@@ -87,8 +87,8 @@ definitions:
       type: DeclarativeStream
       name: objects
       primary_key:
-        - [id, workspace_id]
-        - [id, object_id]
+        - workspace_id
+        - object_id
       retriever:
         type: SimpleRetriever
         requester:
@@ -97,6 +97,15 @@ definitions:
           http_method: GET
         record_selector:
           $ref: "#/definitions/data_selector"
+      transformations:
+        - type: AddFields
+          fields:
+            - type: AddedFieldDefinition
+              path: [workspace_id]
+              value: "{{ record['id']['workspace_id'] }}"
+            - type: AddedFieldDefinition
+              path: [object_id]
+              value: "{{ record['id']['object_id'] }}"
       schema_loader:
         type: InlineSchemaLoader
         schema:
@@ -106,8 +115,8 @@ definitions:
       type: DeclarativeStream
       name: lists
       primary_key:
-        - [id, workspace_id]
-        - [id, list_id]
+        - workspace_id
+        - list_id
       retriever:
         type: SimpleRetriever
         requester:
@@ -116,6 +125,15 @@ definitions:
           http_method: GET
         record_selector:
           $ref: "#/definitions/data_selector"
+      transformations:
+        - type: AddFields
+          fields:
+            - type: AddedFieldDefinition
+              path: [workspace_id]
+              value: "{{ record['id']['workspace_id'] }}"
+            - type: AddedFieldDefinition
+              path: [list_id]
+              value: "{{ record['id']['list_id'] }}"
       schema_loader:
         type: InlineSchemaLoader
         schema:
@@ -125,8 +143,8 @@ definitions:
       type: DeclarativeStream
       name: workspace_members
       primary_key:
-        - [id, workspace_id]
-        - [id, workspace_member_id]
+        - workspace_id
+        - workspace_member_id
       retriever:
         type: SimpleRetriever
         requester:
@@ -135,6 +153,15 @@ definitions:
           http_method: GET
         record_selector:
           $ref: "#/definitions/data_selector"
+      transformations:
+        - type: AddFields
+          fields:
+            - type: AddedFieldDefinition
+              path: [workspace_id]
+              value: "{{ record['id']['workspace_id'] }}"
+            - type: AddedFieldDefinition
+              path: [workspace_member_id]
+              value: "{{ record['id']['workspace_member_id'] }}"
       schema_loader:
         type: InlineSchemaLoader
         schema:
@@ -144,9 +171,9 @@ definitions:
       type: DeclarativeStream
       name: object_attributes
       primary_key:
-        - [id, workspace_id]
-        - [id, object_id]
-        - [id, attribute_id]
+        - workspace_id
+        - object_id
+        - attribute_id
       retriever:
         type: SimpleRetriever
         requester:
@@ -169,6 +196,15 @@ definitions:
             - type: AddedFieldDefinition
               path: [_airbyte_attio_object_slug]
               value: "{{ stream_slice.object_slug }}"
+            - type: AddedFieldDefinition
+              path: [workspace_id]
+              value: "{{ record['id']['workspace_id'] }}"
+            - type: AddedFieldDefinition
+              path: [object_id]
+              value: "{{ record['id']['object_id'] }}"
+            - type: AddedFieldDefinition
+              path: [attribute_id]
+              value: "{{ record['id']['attribute_id'] }}"
       schema_loader:
         type: InlineSchemaLoader
         schema:
@@ -178,9 +214,9 @@ definitions:
       type: DeclarativeStream
       name: records
       primary_key:
-        - [id, workspace_id]
-        - [id, object_id]
-        - [id, record_id]
+        - workspace_id
+        - object_id
+        - record_id
       retriever:
         type: SimpleRetriever
         requester:
@@ -207,6 +243,15 @@ definitions:
             - type: AddedFieldDefinition
               path: [_airbyte_attio_object_slug]
               value: "{{ stream_slice.object_slug }}"
+            - type: AddedFieldDefinition
+              path: [workspace_id]
+              value: "{{ record['id']['workspace_id'] }}"
+            - type: AddedFieldDefinition
+              path: [object_id]
+              value: "{{ record['id']['object_id'] }}"
+            - type: AddedFieldDefinition
+              path: [record_id]
+              value: "{{ record['id']['record_id'] }}"
       schema_loader:
         type: InlineSchemaLoader
         schema:
@@ -216,9 +261,9 @@ definitions:
       type: DeclarativeStream
       name: list_attributes
       primary_key:
-        - [id, workspace_id]
-        - [id, list_id]
-        - [id, attribute_id]
+        - workspace_id
+        - list_id
+        - attribute_id
       retriever:
         type: SimpleRetriever
         requester:
@@ -241,6 +286,15 @@ definitions:
             - type: AddedFieldDefinition
               path: [_airbyte_attio_list_slug]
               value: "{{ stream_slice.list_slug }}"
+            - type: AddedFieldDefinition
+              path: [workspace_id]
+              value: "{{ record['id']['workspace_id'] }}"
+            - type: AddedFieldDefinition
+              path: [list_id]
+              value: "{{ record['id']['list_id'] }}"
+            - type: AddedFieldDefinition
+              path: [attribute_id]
+              value: "{{ record['id']['attribute_id'] }}"
       schema_loader:
         type: InlineSchemaLoader
         schema:
@@ -250,9 +304,9 @@ definitions:
       type: DeclarativeStream
       name: entries
       primary_key:
-        - [id, workspace_id]
-        - [id, list_id]
-        - [id, entry_id]
+        - workspace_id
+        - list_id
+        - entry_id
       retriever:
         type: SimpleRetriever
         requester:
@@ -279,6 +333,15 @@ definitions:
             - type: AddedFieldDefinition
               path: [_airbyte_attio_list_slug]
               value: "{{ stream_slice.list_slug }}"
+            - type: AddedFieldDefinition
+              path: [workspace_id]
+              value: "{{ record['id']['workspace_id'] }}"
+            - type: AddedFieldDefinition
+              path: [list_id]
+              value: "{{ record['id']['list_id'] }}"
+            - type: AddedFieldDefinition
+              path: [entry_id]
+              value: "{{ record['id']['entry_id'] }}"
       schema_loader:
         type: InlineSchemaLoader
         schema:
@@ -288,8 +351,8 @@ definitions:
       type: DeclarativeStream
       name: notes
       primary_key:
-        - [id, workspace_id]
-        - [id, note_id]
+        - workspace_id
+        - note_id
       retriever:
         type: SimpleRetriever
         requester:
@@ -300,6 +363,15 @@ definitions:
           $ref: "#/definitions/data_selector"
         paginator:
           $ref: "#/definitions/offset_paginator_query"
+      transformations:
+        - type: AddFields
+          fields:
+            - type: AddedFieldDefinition
+              path: [workspace_id]
+              value: "{{ record['id']['workspace_id'] }}"
+            - type: AddedFieldDefinition
+              path: [note_id]
+              value: "{{ record['id']['note_id'] }}"
       schema_loader:
         type: InlineSchemaLoader
         schema:
@@ -324,6 +396,10 @@ schemas:
       id:
         type: object
         additionalProperties: true
+      workspace_id:
+        type: string
+      object_id:
+        type: string
       api_slug:
         type: string
   list:
@@ -334,6 +410,10 @@ schemas:
       id:
         type: object
         additionalProperties: true
+      workspace_id:
+        type: string
+      list_id:
+        type: string
       api_slug:
         type: string
   workspace_member:
@@ -344,6 +424,10 @@ schemas:
       id:
         type: object
         additionalProperties: true
+      workspace_id:
+        type: string
+      workspace_member_id:
+        type: string
   object_attribute:
     type: object
     additionalProperties: true
@@ -352,6 +436,12 @@ schemas:
       id:
         type: object
         additionalProperties: true
+      workspace_id:
+        type: string
+      object_id:
+        type: string
+      attribute_id:
+        type: string
       _airbyte_attio_object_slug:
         type: string
   record:
@@ -362,6 +452,12 @@ schemas:
       id:
         type: object
         additionalProperties: true
+      workspace_id:
+        type: string
+      object_id:
+        type: string
+      record_id:
+        type: string
       values:
         type: object
         additionalProperties: true
@@ -375,6 +471,12 @@ schemas:
       id:
         type: object
         additionalProperties: true
+      workspace_id:
+        type: string
+      list_id:
+        type: string
+      attribute_id:
+        type: string
       _airbyte_attio_list_slug:
         type: string
   entry:
@@ -385,6 +487,12 @@ schemas:
       id:
         type: object
         additionalProperties: true
+      workspace_id:
+        type: string
+      list_id:
+        type: string
+      entry_id:
+        type: string
       entry_values:
         type: object
         additionalProperties: true
@@ -398,6 +506,10 @@ schemas:
       id:
         type: object
         additionalProperties: true
+      workspace_id:
+        type: string
+      note_id:
+        type: string
 
 spec:
   type: Spec

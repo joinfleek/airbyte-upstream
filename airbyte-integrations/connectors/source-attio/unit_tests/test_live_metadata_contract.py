@@ -43,6 +43,9 @@ def test_live_discovery_and_workspace_topology() -> None:
         "SUCCEEDED"
     )
 
+    catalog = source.discover(logging.getLogger("source-attio-discover"), config)
+    assert sorted(stream.name for stream in catalog.streams) == EXPECTED["streams"]
+
     streams = {stream.name: stream for stream in source.streams(config)}
     assert sorted(streams) == EXPECTED["streams"]
 
@@ -73,13 +76,14 @@ def test_live_companies_partition_has_unique_records() -> None:
     )
     keys = {
         (
-            row["id"]["workspace_id"],
-            row["id"]["object_id"],
-            row["id"]["record_id"],
+            row["workspace_id"],
+            row["object_id"],
+            row["record_id"],
         )
         for row in rows
     }
 
     assert rows
     assert len(rows) == len(keys)
+    assert all(None not in key for key in keys)
     assert all(row["_airbyte_attio_object_slug"] == "companies" for row in rows)
