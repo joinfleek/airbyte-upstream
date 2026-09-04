@@ -1,0 +1,15 @@
+connector_image: airbyte/source-attio:dev
+acceptance_tests:
+  spec:
+    tests:
+      - spec_path: manifest.yaml
+  connection:
+    tests:
+      - config_path: integration_tests/invalid_config.json
+        status: failed
+  discovery:
+    tests:
+      - config_path: integration_tests/invalid_config.json
+        backward_compatibility_tests_config:
+          disable_for_version: 0.1.0
+

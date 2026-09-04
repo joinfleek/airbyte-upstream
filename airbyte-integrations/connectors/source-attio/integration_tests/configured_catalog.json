@@ -1,0 +1,31 @@
+{
+  "streams": [
+    {
+      "stream": {
+        "name": "objects",
+        "json_schema": {"type": "object", "additionalProperties": true},
+        "supported_sync_modes": ["full_refresh"]
+      },
+      "sync_mode": "full_refresh",
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "lists",
+        "json_schema": {"type": "object", "additionalProperties": true},
+        "supported_sync_modes": ["full_refresh"]
+      },
+      "sync_mode": "full_refresh",
+      "destination_sync_mode": "append"
+    },
+    {
+      "stream": {
+        "name": "workspace_members",
+        "json_schema": {"type": "object", "additionalProperties": true},
+        "supported_sync_modes": ["full_refresh"]
+      },
+      "sync_mode": "full_refresh",
+      "destination_sync_mode": "append"
+    }
+  ]
+}

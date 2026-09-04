@@ -1,0 +1,26 @@
+{
+  "streams": [
+    "entries",
+    "list_attribute_options",
+    "list_attributes",
+    "lists",
+    "notes",
+    "object_attribute_options",
+    "object_attribute_statuses",
+    "object_attributes",
+    "objects",
+    "records",
+    "workspace_members"
+  ],
+  "objects": [
+    "companies",
+    "deals",
+    "justcall_call",
+    "people"
+  ],
+  "lists": [
+    "claudia_outreach_queue",
+    "inbound_leads_message_queue",
+    "outbound_leads_message_queue"
+  ]
+}
